@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/logo BizertIA.png">
+    <title>BizertIA | Absence Tracking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/public/style/style.css">
+    <style>
+        /* Light professional scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        
+        .message-notification {
+            position: fixed;
+            bottom: 2.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        /* Keep original chat animations */
+        .chat-window {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .chat-window.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="bg-sky-50 min-h-screen font-sans flex flex-col text-slate-800">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="flex-shrink-0 flex items-center gap-3 text-xl font-bold text-slate-800">
+                    <img src="/logo BizertIA.png" alt="BizertIA Logo" class="h-9 w-auto rounded-md">
+                    <span>BizertIA</span>
+                </a>
+                    <div class="hidden md:flex space-x-2">
+                        <a href="/" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">Home</a>
+                        <a href="/" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">Faculty</a>
+                        <a href="/about" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">About BizertIA        </a>
+                    </div>
+                </div>
+                
+                <!-- User Section with Dropdown (light) -->
+                <div class="flex items-center gap-4 relative">
+                    <div class="hidden sm:flex flex-col items-end">
+                        <span class="text-sm font-semibold text-slate-800">
+                            <%= user ? user.lastName + ' ' + user.firstName : 'Student' %>
+                        </span>
+                        <span class="text-xs text-sky-600">
+                            ID: <%= user && user.nationalId ? user.nationalId : 'N/A' %>
+                        </span>
+                    </div>
+
+                    <div class="relative">
+                        <button id="user-menu-button" 
+                                class="flex items-center gap-2 focus:outline-none group">
+                            <img class="h-10 w-10 rounded-full object-cover border-2 border-slate-200 group-hover:border-sky-400 transition shadow-sm"
+                                 src="<%= user && user.profilePicture ? user.profilePicture : '/uploads/default-avatars/default-avatar.png' %>"
+                                 alt="Profile">
+                            <i class="fa-solid fa-chevron-down text-slate-500 text-sm group-hover:text-slate-700 transition hidden md:block"></i>
+                        </button>
+
+                        <div id="user-dropdown" 
+                             class="hidden absolute right-0 top-14 w-56 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
+                            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                                <p class="text-xs text-slate-500">Signed in as</p>
+                                <p class="text-sm font-medium text-slate-800 truncate">
+                                    <%= user ? user.email : 'student@bizertia.com' %>
+                                </p>
+                            </div>
+                            <div class="py-2">
+                                <a href="/profile" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                                    <i class="fa-solid fa-user w-5 text-center"></i>
+                                    My Profile
+                                </a>
+                                <div class="border-t border-slate-100 my-2"></div>
+                                <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
+                                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                                    Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
+        <% if (global_eliminations.length > 0) { %>
+            <div class="bg-rose-50 border-l-4 border-rose-500 rounded-r-xl p-5 mb-8 shadow-sm flex items-start gap-4">
+                <div class="bg-rose-100 p-2 rounded-full border border-rose-200 flex-shrink-0 mt-0.5">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600 text-xl w-6 h-6 flex items-center justify-center"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-rose-700">Action Required: Academic Elimination</h3>
+                    <div class="mt-1.5 text-sm text-rose-800/80 leading-relaxed space-y-1">
+                        <p>
+                            Our records indicate that you have reached the threshold for global elimination as of
+                            <strong class="text-rose-900 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200 mx-1">
+                                <%= new Date(global_eliminations[0].date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %>
+                            </strong>.
+                        </p>
+                        <p class="font-medium text-rose-800 mt-2 flex items-center gap-2">
+                            <i class="fa-solid fa-building-user"></i>
+                            Please contact the administration office immediately to review your status.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+        
+        <header>
+            <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="/" class="hover:text-sky-600 transition">Home</a>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span class="text-slate-800">Absence Tracking</span>
+            </div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 class="text-3xl font-bold text-slate-800">Absence Tracking</h1>
+
+                <div class="flex flex-col items-start gap-2">
+                    <a href="/api/attestations" class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-lg transition shadow-sm text-sm font-medium">
+                        <i class="fa-solid fa-download"></i> Get Attestation
+                    </a>
+
+                    <button id="justifyBtn"
+                        class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg shadow-sm transition font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-file-upload"></i> Justify Your Absences
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Total Absences</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-1"> <%= totalHours %> <span class="text-sm font-normal text-slate-400">hours</span></p>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-sky-100 flex items-center justify-center border border-sky-200">
+                    <i class="fa-solid fa-clock text-sky-600 text-xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Justified</p>
+                    <p class="text-3xl font-bold text-emerald-600 mt-1"><%=justifiedHours%> <span class="text-sm font-normal text-slate-400">hours</span></p>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
+                    <i class="fa-solid fa-check-circle text-emerald-600 text-xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 border border-rose-200 shadow-sm flex items-center justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-2 h-full bg-rose-500"></div>
+                <div>
+                    <p class="text-sm text-slate-500 font-medium">Unjustified</p>
+                    <p class="text-3xl font-bold text-rose-600 mt-1"><%=unjustifiedHours%> <span class="text-sm font-normal text-slate-400">hours</span></p>
+                </div>
+                <div class="h-12 w-12 rounded-full bg-rose-100 flex items-center justify-center border border-rose-200">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600 text-xl"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- SUBJECT ABSENCE PROGRESS -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <% elimination_analysis.sort((a, b) => a.subject.name.localeCompare(b.subject.name)).forEach(item => {
+                 const absences = item.numberOfAbsences;
+                 const max = item.subject.maxAbsencesLimit;
+                 let status = 'Safe';
+                 let colorClass = 'bg-emerald-400';
+                 if (absences >= max) {
+                   status = 'Eliminated';
+                   colorClass = 'bg-rose-500';
+                 } else if (absences >= max * 0.6) {
+                   status = 'Warning';
+                   colorClass = 'bg-amber-400';
+                 }
+                 const percentage = Math.min((absences / max) * 100, 100);
+            %>
+                <div class="bg-white border <%= status === 'Eliminated' ? 'border-rose-200' : 'border-slate-200' %> rounded-xl p-5 shadow-sm hover:shadow-md transition relative overflow-hidden">
+                    <% if(status === 'Eliminated') { %>
+                        <div class="absolute top-0 right-0 w-1.5 h-full bg-rose-500"></div>
+                    <% } %>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-slate-800 font-semibold"><%= item.subject.name %></h3>
+                        <span class="text-xs text-slate-500">Max: <%= max %></span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2 mb-3">
+                        <div class="<%= colorClass %> h-2 rounded-full" style="width: <%= percentage %>%"></div>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500"><%= absences %> / <%= max %> absences</span>
+                        <span class="<%= colorClass.replace('bg-', 'text-') %> font-medium flex items-center gap-1">
+                            <% if(status === 'Eliminated') { %>
+                                <i class="fa-solid fa-circle-xmark text-xs"></i>
+                            <% } else if(status === 'Warning') { %>
+                                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                            <% } else { %>
+                                <i class="fa-solid fa-check text-xs"></i>
+                            <% } %>
+                            <%= status %>
+                        </span>
+                    </div>
+                </div>
+            <% }) %>
+        </section>
+
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 bg-white flex flex-col md:flex-row gap-4 justify-between items-center">
+                <h2 class="text-lg font-semibold text-slate-800">Absence History</h2>
+                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <select id="subjectFilter"
+                        class="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500">
+                        <option value="">All Subjects</option>
+                    </select>
+                    <select id="teacherFilter"
+                        class="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500">
+                        <option value="">All Teachers</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-600">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th scope="col" class="px-6 py-4">Date & Time</th>
+                            <th scope="col" class="px-6 py-4">Subject</th>
+                            <th scope="col" class="px-6 py-4">Teacher</th>
+                            <th scope="col" class="px-6 py-4">Type</th>
+                            <th scope="col" class="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <% absences.forEach(item => { %>
+                            <tr class="bg-white hover:bg-slate-50 transition-colors"
+                                data-subject="<%= item.absence.subject?.name || '' %>"
+                                data-teacher="<%= item.teacher ? item.teacher.firstName + ' ' + item.teacher.lastName : '' %>">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-slate-800 font-medium">
+                                        <%= new Date(item.absence.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                                    </div>
+                                    <div class="text-xs text-slate-400">
+                                        <%= item.absence.startTime %> - <%= item.absence.endTime %>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full subject-dot" data-subject="<%= item.absence.subject?.name || 'N/A' %>"></div>
+                                        <%= item.absence.subject?.name || 'N/A' %>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <%= item.teacher ? item.teacher.firstName + ' ' + item.teacher.lastName : 'N/A' %>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <%= item.absence.sessionType %>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <% if (item.absence.isJustified) { %>
+                                        <span class="bg-emerald-100 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                                            <i class="fa-solid fa-check text-[10px]"></i> Justified
+                                        </span>
+                                    <% } else { %>
+                                        <span class="bg-rose-100 text-rose-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                                            Unjustified
+                                        </span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                        <tr id="noResultsRow" style="display:none;">
+                            <td colspan="6" class="text-center py-6 text-slate-500">No results found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-white flex justify-between items-center text-sm text-slate-500">
+                <span id="tableInfo"></span>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Background (Light) -->
+    <div id="justifyModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 relative shadow-xl border border-slate-200 mx-4">
+            <button id="closeModal" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h2 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-robot text-sky-600"></i> AI Justification
+            </h2>
+            <div id="aiResponseArea" class="hidden mb-4 p-4 rounded-lg border border-sky-200 bg-sky-50">
+                <p class="text-xs text-sky-700 font-bold uppercase tracking-wider mb-1">Atlas AI says:</p>
+                <p id="aiChat" class="text-sky-800 text-sm italic mb-3 leading-relaxed"></p>
+                <div id="dbStatus" class="text-xs font-semibold p-2 rounded bg-white border border-slate-200"></div>
+            </div>
+            <div id="uploadFields">
+                <p class="text-slate-600 text-sm mb-4">Upload your digital medical certificate (PDF ONLY). Atlas will analyze the dates and update your absences automatically.</p>
+                <label class="block mb-4">
+                    <span class="sr-only">Choose File</span>
+                    <input type="file" id="certificateInput" accept="application/pdf"
+                        class="block w-full text-sm text-slate-600
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-sky-600 file:text-white
+                        hover:file:bg-sky-700 cursor-pointer">
+                </label>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="cancelUpload" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition">
+                    Cancel
+                </button>
+                <button id="submitUpload" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-lg transition font-medium flex items-center gap-2 shadow-sm">
+                    <span id="btnText">Submit to AI</span>
+                    <i id="spinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dropdown Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const button = document.getElementById('user-menu-button');
+            const dropdown = document.getElementById('user-dropdown');
+            if (button && dropdown) {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('hidden');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        // Filter and color logic (exactly same as original, just adapted colors)
+        document.addEventListener("DOMContentLoaded", () => {
+            const subjectFilter = document.getElementById("subjectFilter");
+            const teacherFilter = document.getElementById("teacherFilter");
+            const rows = document.querySelectorAll("tbody tr:not(#noResultsRow)");
+            const tableInfo = document.getElementById("tableInfo");
+            const noResultsRow = document.getElementById("noResultsRow");
+
+            const subjectsSet = new Set();
+            const teachersSet = new Set();
+
+            function getColorFromString(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const h = hash % 360;
+                return `hsl(${h}, 60%, 50%)`;
+            }
+
+            rows.forEach(row => {
+                const subject = row.dataset.subject?.trim();
+                const teacher = row.dataset.teacher?.trim();
+                if (subject) subjectsSet.add(subject);
+                if (teacher) teachersSet.add(teacher);
+            });
+
+            [...subjectsSet].sort().forEach(sub => {
+                const option = document.createElement("option");
+                option.value = sub;
+                option.textContent = sub;
+                subjectFilter.appendChild(option);
+            });
+
+            [...teachersSet].sort().forEach(t => {
+                const option = document.createElement("option");
+                option.value = t;
+                option.textContent = t;
+                teacherFilter.appendChild(option);
+            });
+
+            function updateTableInfo() {
+                const visibleRows = [...rows].filter(row => row.style.display !== "none");
+                const total = rows.length;
+                const visible = visibleRows.length;
+                if (visible === 0) {
+                    tableInfo.textContent = "Showing 0 of " + total + " entries";
+                    noResultsRow.style.display = "";
+                } else {
+                    tableInfo.textContent = `Showing ${visible} of ${total} entries`;
+                    noResultsRow.style.display = "none";
+                }
+            }
+
+            function filterTable() {
+                const selectedSubject = subjectFilter.value;
+                const selectedTeacher = teacherFilter.value;
+                rows.forEach(row => {
+                    const subject = row.dataset.subject?.trim();
+                    const teacher = row.dataset.teacher?.trim();
+                    const matchSubject = !selectedSubject || subject === selectedSubject;
+                    const matchTeacher = !selectedTeacher || teacher === selectedTeacher;
+                    row.style.display = (matchSubject && matchTeacher) ? "" : "none";
+                });
+                updateTableInfo();
+            }
+
+            document.querySelectorAll('.subject-dot').forEach(dot => {
+                const subject = dot.dataset.subject;
+                dot.style.backgroundColor = getColorFromString(subject);
+            });
+
+            subjectFilter.addEventListener("change", filterTable);
+            teacherFilter.addEventListener("change", filterTable);
+            updateTableInfo();
+
+            // Modal Logic (unchanged functionality)
+            const justifyBtn = document.getElementById('justifyBtn');
+            const justifyModal = document.getElementById('justifyModal');
+            const closeModal = document.getElementById('closeModal');
+            const cancelUpload = document.getElementById('cancelUpload');
+            const submitUpload = document.getElementById('submitUpload');
+            const certificateInput = document.getElementById('certificateInput');
+
+            justifyBtn.addEventListener('click', () => {
+                justifyModal.classList.remove('hidden');
+            });
+
+            function closeModalAndReset() {
+                justifyModal.classList.add('hidden');
+                document.getElementById('aiResponseArea').classList.add('hidden');
+                document.getElementById('aiChat').innerText = '';
+                document.getElementById('dbStatus').innerText = '';
+                document.getElementById('certificateInput').value = '';
+                const cancelBtn = document.getElementById('cancelUpload');
+                cancelBtn.innerText = "Cancel";
+                cancelBtn.classList.remove('text-white', 'bg-gray-700', 'hover:bg-gray-600', 'px-5', 'py-2', 'rounded-lg');
+                cancelBtn.classList.add('text-slate-600', 'hover:text-slate-800');
+                submitUpload.classList.remove('hidden');
+                document.getElementById('uploadFields').classList.remove('hidden');
+            }
+
+            closeModal.addEventListener('click', closeModalAndReset);
+            cancelUpload.addEventListener('click', () => {
+                if (cancelUpload.innerText.trim() === "Cancel") {
+                    closeModalAndReset();
+                }
+            });
+
+            submitUpload.addEventListener('click', async () => {
+                const file = certificateInput.files[0];
+                if (!file) return alert('Please select a file.');
+
+                const btnText = document.getElementById('btnText');
+                const spinner = document.getElementById('spinner');
+                const aiResponseArea = document.getElementById('aiResponseArea');
+                const aiChat = document.getElementById('aiChat');
+                const dbStatus = document.getElementById('dbStatus');
+
+                submitUpload.disabled = true;
+                btnText.innerText = "Atlas is thinking...";
+                spinner.classList.remove('hidden');
+
+                const formData = new FormData();
+                formData.append('certificate', file);
+
+                try {
+                    const response = await fetch('/api/absence/justify', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    aiResponseArea.classList.remove('hidden');
+                    aiChat.innerText = `"${data.aiResponse}"`;
+                    dbStatus.innerText = data.statusMessage;
+
+                    function showToast(message, isSuccess) {
+                        let toast = document.getElementById('floating-toast');
+                        if (!toast) {
+                            toast = document.createElement('div');
+                            toast.id = 'floating-toast';
+                            document.body.appendChild(toast);
+                        }
+                        toast.textContent = message;
+                        const baseClasses = 'message-notification transition-all duration-300 ';
+                        const colorClasses = isSuccess 
+                            ? 'bg-emerald-600 text-white' 
+                            : 'bg-rose-600 text-white';
+                        toast.className = baseClasses + colorClasses;
+                        toast.classList.remove('hidden');
+                        setTimeout(() => {
+                            toast.classList.add('hidden');
+                        }, 10000);
+                    }
+
+                    if(data.success) {
+                        dbStatus.classList.remove('text-red-400');
+                        dbStatus.classList.add('text-emerald-600');
+                        showToast(`${data.statusMessage}`, true);
+                        document.getElementById('uploadFields').classList.add('hidden');
+                        submitUpload.classList.add('hidden');
+                        const cancelBtn = document.getElementById('cancelUpload');
+                        cancelBtn.innerText = "Close & Refresh Table";
+                        cancelBtn.classList.remove('text-slate-600', 'hover:text-slate-800');
+                        cancelBtn.classList.add('text-white', 'bg-slate-600', 'hover:bg-slate-700', 'px-5', 'py-2', 'rounded-lg');
+                        cancelBtn.onclick = () => window.location.reload();
+                        document.getElementById('closeModal').onclick = () => window.location.reload();
+                    } else {
+                        dbStatus.classList.remove('text-emerald-600');
+                        dbStatus.classList.add('text-rose-600');
+                    }
+                } catch (err) {
+                    alert("Error connecting to AI server.");
+                } finally {
+                    submitUpload.disabled = false;
+                    btnText.innerText = "Submit to AI";
+                    spinner.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</body>
+</html>

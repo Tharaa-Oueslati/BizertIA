@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/images/logo-bizertia.png">
+    <title>BizertIA | Student Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/public/style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F9FF;
+            color: #1E293B;
+        }
+
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #E2E8F0;
+        }
+        .chat-window {
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: bottom right;
+        }
+
+        .chat-window.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .faculty-card {
+            transition: all 0.3s ease;
+        }
+        .faculty-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+        }
+        
+        #chat-messages ul, #chat-messages ol {
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        #chat-messages ul {
+            list-style-type: disc;
+        }
+
+        #chat-messages ol {
+            list-style-type: decimal;
+        }
+
+        #chat-messages li {
+            margin-bottom: 0.25rem;
+        }
+
+        #chat-messages p {
+            margin-bottom: 0.5rem;
+        }
+
+        #chat-messages p:last-child {
+            margin-bottom: 0;
+        }
+
+        #chat-messages strong {
+            color: #0F172A;
+            font-weight: 600;
+        }
+        
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-messages::-webkit-scrollbar-track {
+            background: #F1F5F9;
+            border-radius: 10px;
+        }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-sky-50 min-h-screen font-sans flex flex-col relative text-slate-800">
+
+<!-- Navbar - Light professional (logo matches about.ejs) -->
+<nav class="bg-white border-b border-slate-200 sticky top-0 z-[100] shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="flex-shrink-0 flex items-center gap-3 text-xl font-bold text-slate-800">
+                    <img src="/logo BizertIA.png" alt="BizertIA Logo" class="h-9 w-auto rounded-md">
+                    <span>BizertIA</span>
+                </a>
+                <div class="hidden md:flex space-x-2">
+                    <a href="/" class="text-slate-700 bg-slate-100 px-3 py-2 rounded-md text-sm font-medium border border-slate-200 transition hover:bg-slate-200">Home</a>
+                    <a href="/about" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">
+                        About BizertIA
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 relative">
+                <% if (user) { %>
+                    <div class="hidden sm:flex flex-col items-end">
+                        <span class="text-sm font-semibold text-slate-800">
+                            <%= user.lastName %> <%= user.firstName %>
+                        </span>
+                        <span class="text-xs text-sky-600">
+                            ID: <%= user.nationalId ? user.nationalId : 'N/A' %>
+                        </span>
+                    </div>
+
+                    <div class="relative">
+                        <button id="user-menu-button" class="flex items-center gap-2 focus:outline-none group">
+                            <img class="h-10 w-10 rounded-full object-cover border-2 border-slate-200 group-hover:border-sky-400 transition shadow-sm"
+                                 src="<%= user.profilePicture ? user.profilePicture : '/uploads/default-avatars/default-avatar.png' %>"
+                                 alt="Profile">
+                            <i class="fa-solid fa-chevron-down text-slate-500 text-sm group-hover:text-slate-700 transition hidden md:block"></i>
+                        </button>
+
+                        <div id="user-dropdown" class="hidden absolute right-0 top-14 w-56 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
+                            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                                <p class="text-xs text-slate-500">Signed in as</p>
+                                <p class="text-sm font-medium text-slate-800 truncate">
+                                    <%= user.email %>
+                                </p>
+                            </div>
+                            <div class="py-2">
+                                <a href="/profile" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                                    <i class="fa-solid fa-user w-5 text-center"></i>
+                                    My Profile
+                                </a>
+                                <div class="border-t border-slate-100 my-2"></div>
+                                <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
+                                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                                    Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                <% } else { %>
+                    <a href="/signin" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                        <i class="fa-solid fa-right-to-bracket mr-2"></i>Log In
+                    </a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
+
+    <header id="dashboard">
+        <h1 class="text-3xl font-bold text-slate-800">
+            Welcome to BizertIA 👋
+        </h1>
+        <p class="text-slate-600 mt-2">
+            <%= user ? "Manage your absences and administrative documents from your personal space." : "View institutional information. Log in to access your personal student tools." %>
+        </p>
+    </header>
+
+    <% if (user) { %>
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Absence Tracking Card -->
+            <a href="/api/absence" class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-slate-200 hover:border-sky-300 flex items-start gap-5 cursor-pointer group">
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg text-rose-500 group-hover:bg-rose-50 group-hover:text-rose-600 transition-colors">
+                    <i class="fa-solid fa-calendar-xmark text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-slate-800 group-hover:text-sky-700 transition-colors">Absence Tracking</h2>
+                    <p class="text-sm text-slate-600 mt-2">Check the total number of your absences per module and monitor your attendance.</p>
+                </div>
+            </a>
+
+            <!-- Certificate of Attendance Card -->
+            <a href="/api/attestations" class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-slate-200 hover:border-sky-300 flex items-start gap-5 cursor-pointer group">
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg text-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+                    <i class="fa-solid fa-file-signature text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-slate-800 group-hover:text-sky-700 transition-colors">Certificate of Attendance</h2>
+                    <p class="text-sm text-slate-600 mt-2">Generate and download your official certificate of attendance in PDF format.</p>
+                </div>
+            </a>
+
+            <!-- Internship Submission Card -->
+            <a href="/api/internships/submission" class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border border-slate-200 hover:border-sky-300 flex items-start gap-5 cursor-pointer group">
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg text-amber-600 group-hover:bg-amber-50 group-hover:text-amber-700 transition-colors">
+                    <i class="fa-solid fa-briefcase text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-slate-800 group-hover:text-sky-700 transition-colors">
+                        Internship Submission
+                    </h2>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Submit the scanned internship completion document and track your internship validation status.
+                    </p>
+                </div>
+            </a>
+        </section>
+    <% } %>
+
+    <section id="faculty" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-building-columns text-sky-600 text-3xl"></i>
+            </div>
+            <div>
+                <h2 class="text-3xl font-bold text-slate-800">Faculty of Science and Technology</h2>
+                <p class="text-sky-600 text-lg">Jarzouna, Bizerte, Tunisia</p>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-clock text-sky-500"></i>
+                        Working Hours
+                    </h3>
+                    <p class="text-slate-700">Monday - Friday: <strong class="text-slate-900">8:00 AM - 6:00 PM</strong></p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-sky-500"></i>
+                        Location & Contact
+                    </h3>
+                    <div class="space-y-3 text-slate-700">
+                        <p><strong class="text-slate-800">Address:</strong> Jarzouna, Bizerte, Tunisia, 7021</p>
+                        <p><strong class="text-slate-800">Phone:</strong> <span class="text-sky-600">111-111-111</span></p>
+                        <p><strong class="text-slate-800">Email:</strong> <span class="text-sky-600">Campus@faculty.tn</span></p>
+                        <p><strong class="text-slate-800">Website:</strong> <a href="https://rnu.tn" target="_blank" class="text-sky-600 hover:underline">rnu.tn</a></p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Our Strengths</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
+                            <span class="text-slate-700">State-of-the-art laboratories and research facilities</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
+                            <span class="text-slate-700">Extensive digital and physical library resources</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
+                            <span class="text-slate-700">Active student clubs and scientific societies</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-check text-emerald-500 mt-1"></i>
+                            <span class="text-slate-700">Strong focus on innovation and practical skills</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                    <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                         alt="Faculty Campus"
+                         class="w-full h-80 object-cover">
+                </div>
+
+                <div class="bg-gradient-to-br from-sky-100 to-blue-100 rounded-2xl p-6 text-center border border-sky-200">
+                    <p class="text-sky-800 text-sm uppercase tracking-widest mb-1 font-medium">Faculty of Science and Technology</p>
+                    <p class="text-2xl font-bold text-slate-800">University of Carthage</p>
+                    <p class="text-slate-600 mt-2">Committed to excellence in science and technology education since 2000</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Chat Widget - Light themed -->
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div id="ai-chat-window" class="chat-window bg-white w-[90vw] sm:w-[450px] rounded-2xl shadow-xl border border-slate-200 mb-2 overflow-hidden flex flex-col h-[650px]">
+        <div class="bg-sky-600 p-4 flex justify-between items-center shadow-sm z-10">
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <div class="bg-white text-sky-600 rounded-full h-10 w-10 flex items-center justify-center text-xl shadow-sm">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="absolute bottom-0 right-0 h-3 w-3 bg-emerald-500 border-2 border-sky-600 rounded-full"></div>
+                </div>
+                <div>
+                    <span class="block font-bold text-white text-sm">AI Assistant</span>
+                    <span class="block text-sky-100 text-xs">Online</span>
+                </div>
+            </div>
+            <button id="close-chat" class="text-white hover:text-slate-100 focus:outline-none transition-transform hover:rotate-90">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <div class="flex-grow p-4 overflow-y-auto bg-slate-50 flex flex-col gap-4" id="chat-messages">
+            <div class="flex items-end gap-2">
+                <div class="bg-sky-600 text-white rounded-2xl rounded-bl-sm p-3 text-sm max-w-[85%] shadow-sm">
+                    <% if (user) { %>
+                        Hello <%= user.firstName %>! 👋 I'm your virtual assistant. How can I help you today?
+                    <% } else { %>
+                        Welcome to BizertIA! 👋 I'm our BizertIA virtual assistant. Since you aren't signed in, I can only help you with general information about our faculty. How can I assist you?
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+            <input type="text" id="chat-input" placeholder="Type your message..." class="flex-grow bg-slate-50 border border-slate-200 text-slate-800 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 rounded-full px-4 py-2.5 text-sm outline-none transition-all placeholder-slate-400">
+            <button id="send-message-btn" class="bg-sky-600 text-white rounded-full h-10 w-10 flex items-center justify-center hover:bg-sky-700 transition flex-shrink-0 shadow-sm">
+                <i class="fa-solid fa-paper-plane text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <button id="toggle-chat" class="bg-sky-600 hover:bg-sky-700 text-white rounded-full h-16 w-16 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 focus:outline-none relative">
+        <i class="fa-solid fa-comment-dots text-3xl"></i>
+        <span class="absolute top-0 right-0 flex h-4 w-4">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 border-2 border-white"></span>
+        </span>
+    </button>
+</div>
+
+<script>
+    // ==========================================
+    // 1. DROPDOWN LOGIC
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        const button = document.getElementById('user-menu-button');
+        const dropdown = document.getElementById('user-dropdown');
+
+        if (button && dropdown) {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+    });
+
+    // ==========================================
+    // 2. CHAT UI LOGIC
+    // ==========================================
+    const chatWindow = document.getElementById('ai-chat-window');
+    const toggleBtn = document.getElementById('toggle-chat');
+    const closeBtn = document.getElementById('close-chat');
+
+    if (toggleBtn && chatWindow) {
+        const notificationPing = toggleBtn.querySelector('.absolute.top-0');
+
+        function toggleChat() {
+            chatWindow.classList.toggle('active');
+            if (notificationPing) notificationPing.style.display = 'none';
+
+            const icon = toggleBtn.querySelector('i');
+
+            if (chatWindow.classList.contains('active')) {
+                toggleBtn.classList.remove('h-16', 'w-16', 'text-3xl', 'bg-sky-600', 'hover:bg-sky-700', 'hover:scale-110');
+                toggleBtn.classList.add('h-10', 'w-10', 'text-lg', 'bg-slate-200', 'hover:bg-slate-300', 'text-slate-700');
+                icon.classList.remove('fa-comment-dots');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                toggleBtn.classList.remove('h-10', 'w-10', 'text-lg', 'bg-slate-200', 'hover:bg-slate-300', 'text-slate-700');
+                toggleBtn.classList.add('h-16', 'w-16', 'text-3xl', 'bg-sky-600', 'hover:bg-sky-700', 'hover:scale-110');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-comment-dots');
+            }
+        }
+
+        toggleBtn.addEventListener('click', toggleChat);
+        if (closeBtn) closeBtn.addEventListener('click', toggleChat);
+
+        // ==========================================
+        // 3. CHAT STATE & STORAGE SETTINGS
+        // ==========================================
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-message-btn');
+        const chatMessagesContainer = document.getElementById('chat-messages');
+
+        const rawStudentId = "<%= user && user._id ? user._id : '' %>";
+        const studentId = rawStudentId === '' ? 'guest' : rawStudentId;
+        const STORAGE_KEY = `campushub_chat_history_${studentId}`;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (chatMessagesContainer) {
+                const savedChatHTML = localStorage.getItem(STORAGE_KEY);
+                if (savedChatHTML) {
+                    chatMessagesContainer.innerHTML = savedChatHTML;
+                    scrollToBottom();
+                }
+            }
+        });
+
+        function syncChatToStorage() {
+            if (chatMessagesContainer) {
+                localStorage.setItem(STORAGE_KEY, chatMessagesContainer.innerHTML);
+            }
+        }
+
+        function scrollToBottom() {
+            if (chatMessagesContainer) chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        function appendUserMessage(text) {
+            const msgHTML = `
+            <div class="flex items-end gap-2 justify-end mt-4">
+                <div class="bg-slate-200 text-slate-800 rounded-2xl rounded-br-sm p-3 text-sm max-w-[85%] shadow-sm">
+                    ${text}
+                </div>
+            </div>`;
+            chatMessagesContainer.insertAdjacentHTML('beforeend', msgHTML);
+            scrollToBottom();
+            syncChatToStorage();
+        }
+
+        function appendAIMessage(text) {
+            const msgHTML = `
+            <div class="flex items-end gap-2 mt-4">
+                <div class="bg-sky-600 text-white rounded-2xl rounded-bl-sm p-3 text-sm max-w-[85%] shadow-sm">
+                    ${text}
+                </div>
+            </div>`;
+            chatMessagesContainer.insertAdjacentHTML('beforeend', msgHTML);
+            scrollToBottom();
+            syncChatToStorage();
+        }
+
+        async function handleSendMessage() {
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+
+            appendUserMessage(messageText);
+            chatInput.value = '';
+
+            const statusId = 'status-' + Date.now();
+            chatMessagesContainer.insertAdjacentHTML('beforeend', `
+                <div id="${statusId}" class="flex items-end gap-2 mt-4">
+                    <div class="bg-slate-100 text-slate-600 rounded-2xl rounded-bl-sm p-3 text-sm max-w-[85%] shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-spinner fa-spin text-sky-500"></i>
+                        <span id="${statusId}-text">Working on your request...</span>
+                    </div>
+                </div>
+            `);
+            scrollToBottom();
+
+            try {
+                const response = await fetch('/api/assistantAgent/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: messageText,
+                        student_id: studentId === 'guest' ? '' : studentId
+                    })
+                });
+
+                if (!response.ok) {
+                    document.getElementById(statusId).remove();
+                    appendAIMessage("Sorry, I'm having trouble connecting to the server right now.");
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop();
+
+                    for (const event of events) {
+                        if (!event.startsWith('data: ')) continue;
+                        const data = event.slice(6).trim();
+                        if (data === '[DONE]') break;
+
+                        const parsed = JSON.parse(data);
+                        if (parsed.status) {
+                            document.getElementById(`${statusId}-text`).textContent = parsed.status;
+                            scrollToBottom();
+                        }
+                        if (parsed.token) {
+                            fullText += parsed.token;
+                        }
+                    }
+                }
+
+                document.getElementById(statusId).remove();
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-end gap-2 mt-4';
+                const bubble = document.createElement('div');
+                bubble.className = 'bg-sky-600 text-white rounded-2xl rounded-bl-sm p-3 text-sm max-w-[85%] shadow-sm';
+                bubble.innerHTML = fullText;
+                wrapper.appendChild(bubble);
+                chatMessagesContainer.appendChild(wrapper);
+
+                scrollToBottom();
+                syncChatToStorage();
+
+            } catch (error) {
+                const statusEl = document.getElementById(statusId);
+                if (statusEl) statusEl.remove();
+                console.error('Error:', error);
+                appendAIMessage('Connection broke. Please try again.');
+            }
+        }
+
+        if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
+        if (chatInput) {
+            chatInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') handleSendMessage();
+            });
+        }
+    }
+</script>
+</body>
+</html>

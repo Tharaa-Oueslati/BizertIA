@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizertIA | Attendance Certificate</title>
+    <link rel="icon" type="image/png" href="/logo BizertIA.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/public/style/style.css">
+    <style>
+        /* Light scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        .chat-window {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .chat-window.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .animate-toast { animation: toastIn 0.4s ease-out forwards; }
+        .spinner {
+            animation: rotate 2s linear infinite;
+            width: 18px;
+            height: 18px;
+        }
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-sky-50 min-h-screen font-sans flex flex-col text-slate-800 relative">
+
+    <div id="message-box" class="hidden fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full text-sm font-medium shadow-lg transition-all duration-300"></div>
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="flex-shrink-0 flex items-center gap-3 text-xl font-bold text-slate-800">
+                    <img src="/logo BizertIA.png" alt="BizertIA Logo" class="h-9 w-auto rounded-md">
+                    <span>BizertIA</span>
+                </a>
+                    <div class="hidden md:flex space-x-2">
+                        <a href="/" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">Home</a>
+                        <a href="/about" class="text-slate-600 hover:text-sky-700 hover:bg-slate-100 px-3 py-2 rounded-md text-sm font-medium transition">About BizertIA</a>
+                    </div>
+                </div>
+                
+                <!-- User Section with Dropdown (light) -->
+                <div class="flex items-center gap-4 relative">
+                    <div class="hidden sm:flex flex-col items-end">
+                        <span class="text-sm font-semibold text-slate-800">
+                            <%= user ? user.lastName + ' ' + user.firstName : 'Student' %>
+                        </span>
+                        <span class="text-xs text-sky-600">
+                            ID: <%= user && user.nationalId ? user.nationalId : 'N/A' %>
+                        </span>
+                    </div>
+
+                    <div class="relative">
+                        <button id="user-menu-button" 
+                                class="flex items-center gap-2 focus:outline-none group">
+                            <img class="h-10 w-10 rounded-full object-cover border-2 border-slate-200 group-hover:border-sky-400 transition shadow-sm"
+                                 src="<%= user && user.profilePicture ? user.profilePicture : '/uploads/default-avatars/default-avatar.png' %>"
+                                 alt="Profile">
+                            <i class="fa-solid fa-chevron-down text-slate-500 text-sm group-hover:text-slate-700 transition hidden md:block"></i>
+                        </button>
+
+                        <div id="user-dropdown" 
+                             class="hidden absolute right-0 top-14 w-56 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
+                            <div class="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                                <p class="text-xs text-slate-500">Signed in as</p>
+                                <p class="text-sm font-medium text-slate-800 truncate">
+                                    <%= user ? user.email : 'student@bizertia.com' %>
+                                </p>
+                            </div>
+                            <div class="py-2">
+                                <a href="/profile" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                                    <i class="fa-solid fa-user w-5 text-center"></i>
+                                    My Profile
+                                </a>
+                                <div class="border-t border-slate-100 my-2"></div>
+                                <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
+                                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                                    Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
+        <header>
+            <div class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="/" class="hover:text-sky-600 transition">Home</a>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span class="text-slate-800">Attendance Certificate</span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-800">Attendance Certificate</h1>
+        </header>
+
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex items-center gap-5">
+            <img
+                src="<%= etudiant.profilePicture || '/default-avatar.png' %>"
+                alt="Profile"
+                class="w-16 h-16 rounded-full object-cover border-2 border-sky-200 shadow-sm flex-shrink-0"
+            >
+            <div>
+                <p class="text-base font-semibold text-slate-800"><%= etudiant.prenom %> <%= etudiant.nom %></p>
+                <p class="text-sm text-slate-500 mt-0.5">
+                    National ID:
+                    <span class="font-mono text-sky-600"><%= etudiant.cin || etudiant.nationalId || '—' %></span>
+                </p>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800">Certificate Details</h2>
+                <p class="text-sm text-slate-500 mt-1">Select the academic year and semester, then generate your certificate.</p>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="anneeInput" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1.5">
+                            <i class="fa-solid fa-calendar-days text-sky-500 mr-1"></i> Academic Year
+                        </label>
+                        <input
+                            type="text"
+                            id="anneeInput"
+                            value="2024-2025"
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition-all duration-200 text-sm"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="semestreInput" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1.5">
+                            <i class="fa-solid fa-layer-group text-sky-500 mr-1"></i> Semester
+                        </label>
+                        <div class="relative">
+                            <select
+                                id="semestreInput"
+                                class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition-all duration-200 text-sm appearance-none"
+                            >
+                                <option value="S1">Semester 1</option>
+                                <option value="S2">Semester 2</option>
+                                <option value="Annual">Annual</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 items-center">
+                    <button
+                        id="generateBtn"
+                        onclick="requestAttestation()"
+                        class="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 shadow-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span id="btn-icon"><i class="fa-solid fa-file-circle-check"></i></span>
+                        <span id="btn-text">Generate Certificate</span>
+                    </button>
+                </div>
+                <div id="system-logs" class="hidden mt-4 p-3 bg-slate-100 rounded font-mono text-xs text-slate-700"></div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden fade-in">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-white">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800">My Generated Certificates</h2>
+                    <p class="text-sm text-slate-500 mt-1">Access your approved documents anytime.</p>
+                </div>
+                <div class="px-3 py-1 bg-sky-100 border border-sky-200 rounded-full">
+                    <span class="text-sky-700 text-xs font-bold"><%= historique.length %> Documents</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider font-semibold">
+                        <tr>
+                            <th class="px-6 py-4">Document / Period</th>
+                            <th class="px-6 py-4">Generation Date</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <% if (historique && historique.length > 0) { %>
+                            <% historique.forEach(doc => { %>
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="h-10 w-10 rounded-lg bg-rose-100 flex items-center justify-center border border-rose-200 group-hover:border-rose-300 transition-all">
+                                                <i class="fa-solid fa-file-pdf text-rose-600 text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-slate-800 font-medium">Attendance Certificate</p>
+                                                <p class="text-xs text-slate-500"><%= doc.annee_universitaire %> — <%= doc.semestre %></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-slate-500">
+                                        <%= new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] uppercase font-bold rounded-full">
+                                            Approved
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <a href="/api/attestations/<%= doc._id %>/download" 
+                                           class="inline-flex items-center gap-2 text-sky-600 hover:text-white hover:bg-sky-600 px-3 py-1.5 rounded-md transition-all text-xs font-semibold">
+                                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center opacity-50">
+                                        <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-400"></i>
+                                        <p class="text-sm italic text-slate-500">No certificates found in your records.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-sky-50 rounded-xl p-5 border border-sky-200 shadow-sm flex items-start gap-4">
+            <div class="h-10 w-10 rounded-full bg-sky-100 flex items-center justify-center border border-sky-200 flex-shrink-0 mt-0.5">
+                <i class="fa-solid fa-envelope text-sky-600"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-800">Email Delivery</p>
+                <p class="text-sm text-slate-600 mt-0.5">
+                    An official copy is automatically sent to your student email with the PDF attached upon approval.
+                </p>
+            </div>
+        </section>
+    </main>
+
+
+
+    <script>
+        const matriculeEtudiant = "<%= etudiant.nationalId || etudiant.studentId || '' %>";
+
+        function displayMessage(message, type) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            let classes = 'fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full text-sm font-medium shadow-lg transition-all duration-300 animate-toast';
+            if (type === 'error') {
+                classes += ' bg-rose-600 text-white';
+            } else if (type === 'success') {
+                classes += ' bg-emerald-600 text-white';
+            } else {
+                classes += ' bg-slate-700 text-white';
+            }
+            messageBox.className = classes;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function requestAttestation() {
+            const btn = document.getElementById('generateBtn');
+            const btnText = document.getElementById('btn-text');
+            const btnIcon = document.getElementById('btn-icon');
+            const logs = document.getElementById('system-logs');
+
+            btn.disabled = true;
+            const originalIcon = btnIcon.innerHTML;
+            btnIcon.innerHTML = `<i class="fa-solid fa-circle-notch spinner"></i>`;
+            btnText.innerText = "Processing...";
+            logs.classList.remove('hidden');
+            logs.innerHTML = "";
+            displayMessage('Generating your certificate, please wait...', 'info');
+
+            const payload = {
+                matricule: matriculeEtudiant,
+                annee_universitaire: document.getElementById('anneeInput').value.trim(),
+                semestre: document.getElementById('semestreInput').value,
+                periodStart: "2023-09-01", 
+                periodEnd: "2024-01-31"
+            };
+
+            try {
+                const res = await fetch('/api/attestations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    logs.innerHTML += `<div class="text-emerald-600">> PDF Generated successfully!</div>`;
+                    displayMessage('Success! Your certificate is ready and has been emailed.', 'success');
+                    setTimeout(() => { window.location.reload(); }, 2500);
+                } else {
+                    displayMessage(data.error || 'Server rejected the request', 'error');
+                    logs.innerHTML += `<div class="text-rose-600">> Error: ${data.error}</div>`;
+                    resetBtn(btn, btnText, btnIcon, originalIcon);
+                }
+            } catch (err) {
+                displayMessage('Network error. Please try again.', 'error');
+                logs.innerHTML += `<div class="text-rose-600">> Network Error: ${err.message}</div>`;
+                resetBtn(btn, btnText, btnIcon, originalIcon);
+            }
+        }
+
+        function resetBtn(btn, text, icon, oldIcon) {
+            btn.disabled = false;
+            text.innerText = "Generate Certificate";
+            icon.innerHTML = oldIcon;
+        }
+
+        // Dropdown Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const button = document.getElementById('user-menu-button');
+            const dropdown = document.getElementById('user-dropdown');
+            if (button && dropdown) {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('hidden');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</body>
+</html>
